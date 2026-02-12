@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival RPG</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="ui-container">
+        <div class="hud-item">Health: <span id="health-display">100</span></div>
+        <div class="hud-item">Bandages: <span id="bandage-display">0</span></div>
+        <div class="hud-item">Score: <span id="score-display">0</span></div>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+        <h1>GAME OVER</h1>
+        <p>Score: <span id="final-score">0</span></p>
+        <button id="restart-btn">Restart</button>
+    </div>
+
+    <div id="pause-screen" class="hidden">
+        <h1>PAUSED</h1>
+        <button id="resume-btn">Resume</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <script src="game.js"></script>
+</body>
+
+</html>
