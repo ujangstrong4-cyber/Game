@@ -79,3 +79,112 @@ button {
 button:hover {
     background: #ff6666;
 }
+
+/* --- Mobile Controls --- */
+#mobile-controls {
+    display: none;
+    /* Hidden on desktop by default */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Let touches pass through to canvas */
+    z-index: 10;
+}
+
+/* Show controls on touch devices or small screens */
+@media (hover: none) and (pointer: coarse),
+(max-width: 768px) {
+    #mobile-controls {
+        display: block;
+    }
+}
+
+.joystick-area {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    bottom: 50px;
+    pointer-events: auto;
+    /* Catch touches */
+    touch-action: none;
+    /* Prevent scrolling */
+}
+
+#joystick-left {
+    left: 50px;
+}
+
+#joystick-right {
+    right: 50px;
+}
+
+.joystick-stick {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.mobile-action-btn {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    border: 2px solid white;
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: none;
+    z-index: 12;
+}
+
+#mobile-heal-btn {
+    bottom: 180px;
+    right: 50px;
+    background: rgba(0, 200, 0, 0.6);
+}
+
+#mobile-pause-btn {
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    background: rgba(255, 165, 0, 0.8);
+}
+
+@media (max-width: 768px) {
+    #ui-container {
+        flex-direction: column;
+        gap: 5px;
+        left: 10px;
+        top: 10px;
+    }
+
+    .hud-item {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    p {
+        font-size: 1rem;
+    }
+}

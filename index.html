@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Survival RPG</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -27,6 +27,19 @@
     </div>
 
     <canvas id="gameCanvas"></canvas>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <div id="joystick-left" class="joystick-area">
+            <div class="joystick-stick"></div>
+        </div>
+        <div id="joystick-right" class="joystick-area">
+            <div class="joystick-stick"></div>
+        </div>
+        <button id="mobile-heal-btn" class="mobile-action-btn">💊</button>
+        <button id="mobile-pause-btn" class="mobile-action-btn">⏸️</button>
+    </div>
+
     <script src="game.js"></script>
 </body>
 

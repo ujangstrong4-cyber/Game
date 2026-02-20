@@ -80,10 +80,34 @@ class Player {
 
     update() {
         // Movement
-        if (game.keys['w'] || game.keys['arrowup']) this.y -= this.speed;
-        if (game.keys['s'] || game.keys['arrowdown']) this.y += this.speed;
-        if (game.keys['a'] || game.keys['arrowleft']) this.x -= this.speed;
-        if (game.keys['d'] || game.keys['arrowright']) this.x += this.speed;
+        // Movement
+        let dx = 0;
+        let dy = 0;
+
+        if (game.keys['w'] || game.keys['arrowup']) dy -= 1;
+        if (game.keys['s'] || game.keys['arrowdown']) dy += 1;
+        if (game.keys['a'] || game.keys['arrowleft']) dx -= 1;
+        if (game.keys['d'] || game.keys['arrowright']) dx += 1;
+
+        // Apply Mobile Input
+        if (mobileInput.move.active) {
+            dx = mobileInput.move.x;
+            dy = mobileInput.move.y;
+        }
+
+        // Normalize if diagonal (keyboard only, joystick handles itself mostly)
+        // But for mixed input safety:
+        if (dx !== 0 || dy !== 0) {
+            // Basic normalization for keyboard to prevent fast diagonal
+            if (!mobileInput.move.active && dx !== 0 && dy !== 0) {
+                const len = Math.hypot(dx, dy);
+                dx /= len;
+                dy /= len;
+            }
+
+            this.x += dx * this.speed;
+            this.y += dy * this.speed;
+        }
 
         // Boundary checks
         this.x = Math.max(this.radius, Math.min(game.width - this.radius, this.x));
@@ -104,7 +128,14 @@ class Player {
         ctx.closePath();
 
         // Direction indicator (gun)
-        const angle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
+        // Direction indicator (gun)
+        let angle;
+        if (mobileInput.aim.active) {
+            angle = Math.atan2(mobileInput.aim.y, mobileInput.aim.x);
+        } else {
+            angle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
+        }
+
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(angle);
@@ -236,6 +267,7 @@ let animationId;
 
 function init() {
     player = new Player();
+    player.lastShotTime = 0;
     projectiles = [];
     enemies = [];
     particles = [];
@@ -321,14 +353,35 @@ function update() {
     player.update();
 
     // Player Shooting
-    if (game.mouse.down && game.active) {
+    // Player Shooting
+    if ((game.mouse.down || mobileInput.shooting) && game.active) {
         // Simple rate limiting (one shot per click currently, can add auto-fire later)
-        if (!player.isShooting) {
-            projectiles.push(new Projectile(player.x, player.y, game.mouse.x, game.mouse.y));
-            player.isShooting = true;
+        // For mobile "hold to fire" might be better than tap. 
+        // Current logic: `!player.isShooting` prevents spam. 
+        // Let's allow auto-fire for mobile or change logic to timer-based.
+
+        // Actually, existing logic is "one shot per click/tap".
+        // Let's make it auto-fire with cooldown for better feel, or just keep as is.
+        // Keeping as is for now means mobile users have to tap-tap-tap the right joystick? 
+        // No, `mobileInput.shooting` stays true while holding.
+        // We need a cooldown.
+
+        const now = Date.now();
+        if (now - player.lastShotTime > 200) { // 200ms fire rate
+            let targetX, targetY;
+
+            if (mobileInput.aim.active) {
+                // Aim relative to player
+                targetX = player.x + mobileInput.aim.x * 100;
+                targetY = player.y + mobileInput.aim.y * 100;
+            } else {
+                targetX = game.mouse.x;
+                targetY = game.mouse.y;
+            }
+
+            projectiles.push(new Projectile(player.x, player.y, targetX, targetY));
+            player.lastShotTime = now;
         }
-    } else {
-        player.isShooting = false;
     }
 
     projectiles.forEach(p => p.update());
@@ -404,4 +457,97 @@ function togglePause() {
 }
 
 // Start game
+// --- MOBILE CONTROLS ---
+
+const mobileInput = {
+    move: { x: 0, y: 0, active: false },
+    aim: { x: 0, y: 0, active: false },
+    shooting: false
+};
+
+function setupMobileControls() {
+    const leftZone = document.getElementById('joystick-left');
+    const leftStick = leftZone.querySelector('.joystick-stick');
+    const rightZone = document.getElementById('joystick-right');
+    const rightStick = rightZone.querySelector('.joystick-stick');
+    const healBtn = document.getElementById('mobile-heal-btn');
+    const pauseBtn = document.getElementById('mobile-pause-btn');
+
+    // Helper to handle joystick logic
+    function handleJoystick(e, zone, stick, inputObj) {
+        e.preventDefault();
+        const touch = e.targetTouches[0];
+        if (!touch) return;
+
+        const rect = zone.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const maxDist = rect.width / 2;
+
+        let dx = touch.clientX - centerX;
+        let dy = touch.clientY - centerY;
+        const dist = Math.hypot(dx, dy);
+
+        // Clamp stick visual
+        const clampedDist = Math.min(dist, maxDist);
+        const angle = Math.atan2(dy, dx);
+
+        const stickX = Math.cos(angle) * clampedDist;
+        const stickY = Math.sin(angle) * clampedDist;
+
+        stick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+
+        // Normalize input (-1 to 1)
+        inputObj.x = dx / maxDist; // Allow > 1 for deadzone logic or stick to unit circle
+        inputObj.y = dy / maxDist;
+
+        // Normalize vector if exceeding 1 (for circular movement feel)
+        if (dist > maxDist) {
+            inputObj.x = Math.cos(angle);
+            inputObj.y = Math.sin(angle);
+        }
+
+        inputObj.active = true;
+    }
+
+    function resetJoystick(stick, inputObj) {
+        stick.style.transform = `translate(-50%, -50%)`;
+        inputObj.x = 0;
+        inputObj.y = 0;
+        inputObj.active = false;
+    }
+
+    // Left Joystick (Move)
+    leftZone.addEventListener('touchstart', e => handleJoystick(e, leftZone, leftStick, mobileInput.move), { passive: false });
+    leftZone.addEventListener('touchmove', e => handleJoystick(e, leftZone, leftStick, mobileInput.move), { passive: false });
+    leftZone.addEventListener('touchend', e => resetJoystick(leftStick, mobileInput.move));
+
+    // Right Joystick (Aim/Shoot)
+    rightZone.addEventListener('touchstart', e => {
+        handleJoystick(e, rightZone, rightStick, mobileInput.aim);
+        mobileInput.shooting = true;
+    }, { passive: false });
+    rightZone.addEventListener('touchmove', e => handleJoystick(e, rightZone, rightStick, mobileInput.aim), { passive: false });
+    rightZone.addEventListener('touchend', e => {
+        resetJoystick(rightStick, mobileInput.aim);
+        mobileInput.shooting = false;
+    });
+
+    // Buttons
+    healBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        // Simulate 'E' key press logic
+        if (player) player.useBandage();
+    });
+
+    pauseBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        togglePause();
+    });
+}
+
+setupMobileControls();
+
+// Start game logic
 init();
